@@ -17,7 +17,7 @@ const Hotels = () => {
         </div>
         <h2 className="heading-lg mt-4">Your Hotel Summary</h2>
         <p className="mt-3 text-muted-foreground text-lg max-w-2xl">
-          All accommodations booked under EasyTrip India. 4 rooms on triple sharing basis.
+          Hotels would be similar, reserved rights for easy trip india under unfamiliar circumstances and comfort of guest may change the property.
         </p>
 
         <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
