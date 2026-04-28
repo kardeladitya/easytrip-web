@@ -1,4 +1,5 @@
 import { HandCoins, Heart } from "lucide-react";
+import qr from "@/assets/upi-qr.jpeg";
 
 const Tips = () => {
   return (
@@ -28,6 +29,26 @@ const Tips = () => {
                 <strong className="text-primary">EasyTrip India does not take any share</strong> from this — we only
                 assist in proper distribution. You may also tip directly if you prefer.
               </p>
+
+              <div className="mt-8 grid sm:grid-cols-[auto_1fr] gap-6 items-center bg-card rounded-2xl p-6 border border-border shadow-card">
+                <img
+                  src={qr}
+                  alt="UPI QR code to tip the EasyTrip India team"
+                  className="w-44 h-auto rounded-xl mx-auto sm:mx-0"
+                />
+                <div>
+                  <div className="text-xs uppercase tracking-widest text-muted-foreground font-bold">
+                    Scan to Tip
+                  </div>
+                  <div className="mt-1 text-xl font-bold text-primary">Any UPI App Works</div>
+                  <div className="mt-2 text-sm text-muted-foreground">
+                    UPI ID: <span className="font-semibold text-foreground">9356914328@ptsbi</span>
+                  </div>
+                  <div className="mt-1 text-sm text-muted-foreground">
+                    Paytm · PhonePe · GPay · BHIM
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
