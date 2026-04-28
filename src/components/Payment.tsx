@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { CreditCard, CheckCircle2, Clock, Zap, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import PayQRDialog from "./PayQRDialog";
 
 type Inst = {
   no: string;
@@ -18,6 +20,16 @@ const installments: Inst[] = [
 ];
 
 const Payment = () => {
+  const [qrOpen, setQrOpen] = useState(false);
+  const [qrAmount, setQrAmount] = useState<string | undefined>(undefined);
+  const [qrTitle, setQrTitle] = useState("Scan to Pay");
+
+  const openQR = (amount?: string, title = "Scan to Pay") => {
+    setQrAmount(amount);
+    setQrTitle(title);
+    setQrOpen(true);
+  };
+
   return (
     <section id="payment" className="section-padding bg-gradient-soft">
       <div className="container-custom">
@@ -68,7 +80,10 @@ const Payment = () => {
                 </div>
 
                 {i.status === "pending" && (
-                  <Button className="bg-gradient-primary text-secondary-foreground hover:opacity-95 rounded-full shrink-0">
+                  <Button
+                    onClick={() => openQR(i.amount, `Pay ${i.no} Installment`)}
+                    className="bg-gradient-primary text-secondary-foreground hover:opacity-95 rounded-full shrink-0"
+                  >
                     <Zap className="w-4 h-4 mr-1" /> Pay Now
                   </Button>
                 )}
@@ -89,12 +104,14 @@ const Payment = () => {
 
                 <div className="mt-8 space-y-3">
                   <Button
+                    onClick={() => openQR("₹70,000", "Pay Next Installment")}
                     size="lg"
                     className="w-full bg-gradient-primary text-secondary-foreground hover:opacity-95 rounded-full h-14 text-base font-semibold pulse-glow"
                   >
                     <Zap className="w-5 h-5 mr-1" /> Pay Now
                   </Button>
                   <Button
+                    onClick={() => openQR("₹2,62,000", "Pay Full Amount")}
                     size="lg"
                     variant="outline"
                     className="w-full rounded-full h-14 text-base font-semibold bg-white/5 border-white/20 text-white hover:bg-white/15 hover:text-white"
@@ -111,6 +128,8 @@ const Payment = () => {
           </div>
         </div>
       </div>
+
+      <PayQRDialog open={qrOpen} onOpenChange={setQrOpen} amount={qrAmount} title={qrTitle} />
     </section>
   );
 };
