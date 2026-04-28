@@ -23,9 +23,7 @@ const Cost = () => {
 
         <p className="mt-4 text-white/70">Inclusive of 5% GST · All taxes included</p>
 
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
-          <Stat value="₹1,48,000" label="Amount Paid" tone="success" />
-          <Stat value="₹2,62,000" label="Amount Pending" tone="warn" />
+        <div className="mt-12 max-w-md mx-auto">
           <Stat value="5%" label="GST Included" tone="muted" />
         </div>
 
