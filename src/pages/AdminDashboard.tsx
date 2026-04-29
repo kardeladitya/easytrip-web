@@ -45,9 +45,9 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
+  const handleSignOut = () => {
+    signOutAdmin();
+    navigate(ADMIN_SECRET_PATH);
   };
 
   if (authLoading) {
@@ -79,7 +79,7 @@ const AdminDashboard = () => {
             <img src={logo} alt="EasyTrip India" className="h-12 object-contain" />
             <div>
               <div className="font-bold text-primary">Admin Dashboard</div>
-              <div className="text-xs text-muted-foreground">{session?.user.email}</div>
+              <div className="text-xs text-muted-foreground">EasyTrip India</div>
             </div>
           </div>
           <Button onClick={handleSignOut} variant="outline" className="rounded-full">
