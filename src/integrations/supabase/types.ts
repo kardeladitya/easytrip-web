@@ -14,16 +14,135 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+        }
+        Relationships: []
+      }
+      trips: {
+        Row: {
+          activities: Json | null
+          budget: number | null
+          client_name: string
+          created_at: string
+          created_by: string | null
+          destination: string
+          end_date: string | null
+          exclusions: Json | null
+          hero_image: string | null
+          hotels: Json | null
+          id: string
+          inclusions: Json | null
+          itinerary: Json | null
+          notes: string | null
+          num_days: number | null
+          overview: string | null
+          payments: Json | null
+          slug: string
+          start_date: string | null
+          total_cost: number | null
+          transport: Json | null
+          updated_at: string
+        }
+        Insert: {
+          activities?: Json | null
+          budget?: number | null
+          client_name: string
+          created_at?: string
+          created_by?: string | null
+          destination: string
+          end_date?: string | null
+          exclusions?: Json | null
+          hero_image?: string | null
+          hotels?: Json | null
+          id?: string
+          inclusions?: Json | null
+          itinerary?: Json | null
+          notes?: string | null
+          num_days?: number | null
+          overview?: string | null
+          payments?: Json | null
+          slug: string
+          start_date?: string | null
+          total_cost?: number | null
+          transport?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          activities?: Json | null
+          budget?: number | null
+          client_name?: string
+          created_at?: string
+          created_by?: string | null
+          destination?: string
+          end_date?: string | null
+          exclusions?: Json | null
+          hero_image?: string | null
+          hotels?: Json | null
+          id?: string
+          inclusions?: Json | null
+          itinerary?: Json | null
+          notes?: string | null
+          num_days?: number | null
+          overview?: string | null
+          payments?: Json | null
+          slug?: string
+          start_date?: string | null
+          total_cost?: number | null
+          transport?: Json | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +269,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
