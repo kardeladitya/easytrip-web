@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, ExternalLink, LogOut, ShieldAlert, Map } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { ADMIN_SECRET_PATH, signOutAdmin } from "@/lib/adminAuth";
 import type { Trip } from "@/lib/tripTypes";
 
 const AdminDashboard = () => {
-  const { isAdmin, loading: authLoading, session } = useAdminAuth();
+  const { isAdmin, loading: authLoading } = useAdminAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [trips, setTrips] = useState<Trip[]>([]);
