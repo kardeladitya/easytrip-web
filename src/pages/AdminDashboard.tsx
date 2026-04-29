@@ -6,10 +6,11 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, ExternalLink, LogOut, ShieldAlert, Map } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { ADMIN_SECRET_PATH, signOutAdmin } from "@/lib/adminAuth";
 import type { Trip } from "@/lib/tripTypes";
 
 const AdminDashboard = () => {
-  const { isAdmin, loading: authLoading, session } = useAdminAuth();
+  const { isAdmin, loading: authLoading } = useAdminAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [trips, setTrips] = useState<Trip[]>([]);
@@ -44,9 +45,9 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
+  const handleSignOut = () => {
+    signOutAdmin();
+    navigate(ADMIN_SECRET_PATH);
   };
 
   if (authLoading) {
@@ -78,7 +79,7 @@ const AdminDashboard = () => {
             <img src={logo} alt="EasyTrip India" className="h-12 object-contain" />
             <div>
               <div className="font-bold text-primary">Admin Dashboard</div>
-              <div className="text-xs text-muted-foreground">{session?.user.email}</div>
+              <div className="text-xs text-muted-foreground">EasyTrip India</div>
             </div>
           </div>
           <Button onClick={handleSignOut} variant="outline" className="rounded-full">
