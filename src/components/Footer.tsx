@@ -1,5 +1,15 @@
 import logo from "@/assets/logo.png";
 import { Mail, Globe, Phone } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ADMIN_SECRET_PATH } from "@/lib/adminAuth";
+
+const footerNav = [
+  { label: "Home", href: "#top" },
+  { label: "Destinations", href: "#itinerary" },
+  { label: "Trips", href: "#hotels" },
+  { label: "About Us", href: "#about" },
+  { label: "Contact Us", href: "#footer-contact" },
+];
 
 const Footer = () => {
   return (
