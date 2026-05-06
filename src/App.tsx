@@ -9,7 +9,9 @@ import AdminLogin from "./pages/AdminLogin.tsx";
 import AdminDashboard from "./pages/AdminDashboard.tsx";
 import AdminTripForm from "./pages/AdminTripForm.tsx";
 import TripPage from "./pages/TripPage.tsx";
-import { ADMIN_SECRET_PATH } from "@/lib/adminAuth";
+import AdminForgotPassword from "./pages/AdminForgotPassword.tsx";
+import AdminResetPassword from "./pages/AdminResetPassword.tsx";
+import { ADMIN_FORGOT_PATH, ADMIN_RESET_PATH, ADMIN_SECRET_PATH } from "@/lib/adminAuth";
 
 const queryClient = new QueryClient();
 
