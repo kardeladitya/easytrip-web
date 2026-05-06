@@ -45,8 +45,8 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleSignOut = () => {
-    signOutAdmin();
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
     navigate(ADMIN_SECRET_PATH);
   };
 
