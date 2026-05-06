@@ -1,20 +1,4 @@
-// Simple session-based admin gate. NOT cryptographically secure — the admin
-// panel is intentionally protected only by a secret URL + hardcoded credentials,
-// per product requirements (no Supabase Auth).
-
-export const ADMIN_USERNAME = "easytripadmin";
-export const ADMIN_PASSWORD = "EasyTrip@2026";
+// Admin gate paths. Auth is handled by Supabase Auth + the `user_roles` table.
 export const ADMIN_SECRET_PATH = "/admin-7823-secure-panel";
-const STORAGE_KEY = "etin_admin_session";
-
-export const signInAdmin = (username: string, password: string) => {
-  if (username.trim() === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-    sessionStorage.setItem(STORAGE_KEY, "1");
-    return true;
-  }
-  return false;
-};
-
-export const isAdminSignedIn = () => sessionStorage.getItem(STORAGE_KEY) === "1";
-
-export const signOutAdmin = () => sessionStorage.removeItem(STORAGE_KEY);
+export const ADMIN_FORGOT_PATH = "/admin-7823-secure-panel/forgot";
+export const ADMIN_RESET_PATH = "/admin-reset-password";
