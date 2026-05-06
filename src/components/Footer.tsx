@@ -1,5 +1,15 @@
 import logo from "@/assets/logo.png";
 import { Mail, Globe, Phone } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ADMIN_SECRET_PATH } from "@/lib/adminAuth";
+
+const footerNav = [
+  { label: "Home", href: "#top" },
+  { label: "Destinations", href: "#itinerary" },
+  { label: "Trips", href: "#hotels" },
+  { label: "About Us", href: "#about" },
+  { label: "Contact Us", href: "#footer-contact" },
+];
 
 const Footer = () => {
   return (
@@ -46,8 +56,23 @@ const Footer = () => {
         </div>
       </div>
 
-      <div className="container-custom mt-12 pt-8 border-t border-white/10 text-center text-white/50 text-sm">
-        © {new Date().getFullYear()} EasyTrip India. All rights reserved. · Crafted with care for every traveller.
+      <div className="container-custom mt-12 pt-8 border-t border-white/10">
+        <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-white/80">
+          {footerNav.map((l) => (
+            <a key={l.label} href={l.href} className="hover:text-warning transition-colors">
+              {l.label}
+            </a>
+          ))}
+          <Link
+            to={ADMIN_SECRET_PATH}
+            className="hover:text-warning transition-colors font-semibold text-warning/90"
+          >
+            Admin Portal
+          </Link>
+        </nav>
+        <p className="mt-6 text-center text-white/50 text-sm">
+          © {new Date().getFullYear()} EasyTrip India. All rights reserved. · Crafted with care for every traveller.
+        </p>
       </div>
     </footer>
   );

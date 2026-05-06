@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, ExternalLink, LogOut, ShieldAlert, Map } from "lucide-react";
 import logo from "@/assets/logo.png";
-import { ADMIN_SECRET_PATH, signOutAdmin } from "@/lib/adminAuth";
+import { ADMIN_SECRET_PATH } from "@/lib/adminAuth";
 import type { Trip } from "@/lib/tripTypes";
 
 const AdminDashboard = () => {
@@ -45,8 +45,8 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleSignOut = () => {
-    signOutAdmin();
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
     navigate(ADMIN_SECRET_PATH);
   };
 
