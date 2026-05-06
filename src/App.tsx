@@ -24,6 +24,8 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path={ADMIN_SECRET_PATH} element={<AdminLogin />} />
+          <Route path={ADMIN_FORGOT_PATH} element={<AdminForgotPassword />} />
+          <Route path={ADMIN_RESET_PATH} element={<AdminResetPassword />} />
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/trips/new" element={<AdminTripForm />} />
           <Route path="/admin/trips/:id/edit" element={<AdminTripForm />} />
