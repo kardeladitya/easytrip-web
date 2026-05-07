@@ -5,13 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Index from "./pages/Index.tsx";
 import NotFound from "./pages/NotFound.tsx";
-import AdminLogin from "./pages/AdminLogin.tsx";
-import AdminDashboard from "./pages/AdminDashboard.tsx";
-import AdminTripForm from "./pages/AdminTripForm.tsx";
 import TripPage from "./pages/TripPage.tsx";
-import AdminForgotPassword from "./pages/AdminForgotPassword.tsx";
-import AdminResetPassword from "./pages/AdminResetPassword.tsx";
-import { ADMIN_FORGOT_PATH, ADMIN_RESET_PATH, ADMIN_SECRET_PATH } from "@/lib/adminAuth";
 
 const queryClient = new QueryClient();
 
@@ -23,12 +17,6 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          <Route path={ADMIN_SECRET_PATH} element={<AdminLogin />} />
-          <Route path={ADMIN_FORGOT_PATH} element={<AdminForgotPassword />} />
-          <Route path={ADMIN_RESET_PATH} element={<AdminResetPassword />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/trips/new" element={<AdminTripForm />} />
-          <Route path="/admin/trips/:id/edit" element={<AdminTripForm />} />
           <Route path="/trip/:slug" element={<TripPage />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
