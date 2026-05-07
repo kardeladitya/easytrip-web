@@ -1,7 +1,5 @@
 import logo from "@/assets/logo.png";
 import { Mail, Globe, Phone } from "lucide-react";
-import { Link } from "react-router-dom";
-import { ADMIN_SECRET_PATH } from "@/lib/adminAuth";
 
 const footerNav = [
   { label: "Home", href: "#top" },
@@ -63,12 +61,6 @@ const Footer = () => {
               {l.label}
             </a>
           ))}
-          <Link
-            to={ADMIN_SECRET_PATH}
-            className="hover:text-warning transition-colors font-semibold text-warning/90"
-          >
-            Admin Portal
-          </Link>
         </nav>
         <p className="mt-6 text-center text-white/50 text-sm">
           © {new Date().getFullYear()} EasyTrip India. All rights reserved. · Crafted with care for every traveller.
