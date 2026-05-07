@@ -3,7 +3,7 @@ const USERNAME = "EasyTrip@4328";
 const PASSWORD = "fTP5kf2N0U";
 
 export const adminLogin = (u: string, p: string): boolean => {
-  if (u === USERNAME && p === PASSWORD) {
+  if (u.trim() === USERNAME && p.trim() === PASSWORD) {
     sessionStorage.setItem(KEY, "1");
     return true;
   }
