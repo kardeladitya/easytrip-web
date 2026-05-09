@@ -1,261 +1,491 @@
-import { useEffect, useState, FormEvent } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
-import AdminLayout from "@/components/admin/AdminLayout";
-import { Card } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Save, ArrowLeft } from "lucide-react";
-import { toast } from "sonner";
-import { createTrip, getTrip, updateTrip } from "@/lib/tripsApi";
-import { emptyTrip, slugify, type Trip, type ItineraryDay, type HotelEntry, type PaymentInst } from "@/lib/tripTypes";
-
-const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <Card className="p-5 md:p-6 border-0 shadow-sm">
-    <h3 className="text-base font-bold text-slate-900 mb-4">{title}</h3>
-    <div className="space-y-3">{children}</div>
-  </Card>
-);
+import { useToast } from "@/hooks/use-toast";
+import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
+import { emptyTrip, slugify, type ItineraryDay, type HotelEntry, type PaymentInst } from "@/lib/tripTypes";
 
 const AdminTripForm = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const isEdit = !!id;
-  const [loading, setLoading] = useState(isEdit);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { isAdmin, loading: authLoading } = useAdminAuth();
+
+  const [form, setForm] = useState<any>(emptyTrip());
   const [saving, setSaving] = useState(false);
-  const [data, setData] = useState<Omit<Trip, "id" | "created_at" | "updated_at">>(() => emptyTrip());
+  const [loading, setLoading] = useState(isEdit);
 
   useEffect(() => {
-    if (!id) return;
-    getTrip(id)
-      .then((t) => {
-        if (t) {
-          const { id: _i, created_at: _c, updated_at: _u, ...rest } = t;
-          setData(rest as any);
+    if (!isEdit) return;
+    supabase
+      .from("trips")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error || !data) {
+          toast({ title: "Error", description: error?.message || "Not found", variant: "destructive" });
+          navigate("/admin");
+          return;
         }
-      })
-      .catch((e) => toast.error(e.message))
-      .finally(() => setLoading(false));
-  }, [id]);
+        setForm(data);
+        setLoading(false);
+      });
+  }, [id, isEdit, navigate, toast]);
 
-  const set = <K extends keyof typeof data>(k: K, v: (typeof data)[K]) =>
-    setData((p) => ({ ...p, [k]: v }));
+  const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
 
-  // Inclusions / Exclusions / Activities (string arrays)
-  const updateStringArr = (key: "inclusions" | "exclusions" | "activities", idx: number, val: string) => {
-    const arr = [...(data[key] as string[])];
-    arr[idx] = val;
-    set(key, arr as any);
+  const setListItem = (key: string, idx: number, value: any) => {
+    setForm((f: any) => {
+      const list = [...(f[key] || [])];
+      list[idx] = value;
+      return { ...f, [key]: list };
+    });
   };
-  const addString = (key: "inclusions" | "exclusions" | "activities") =>
-    set(key, [...(data[key] as string[]), ""] as any);
-  const removeString = (key: "inclusions" | "exclusions" | "activities", idx: number) =>
-    set(key, (data[key] as string[]).filter((_, i) => i !== idx) as any);
 
-  // Hotels
-  const addHotel = () => set("hotels", [...data.hotels, { city: "", name: "", note: "" }]);
-  const updHotel = (i: number, k: keyof HotelEntry, v: string) => {
-    const a = [...data.hotels]; a[i] = { ...a[i], [k]: v }; set("hotels", a);
-  };
-  const rmHotel = (i: number) => set("hotels", data.hotels.filter((_, x) => x !== i));
+  const addListItem = (key: string, item: any) =>
+    setForm((f: any) => ({ ...f, [key]: [...(f[key] || []), item] }));
 
-  // Itinerary
-  const addDay = () =>
-    set("itinerary", [
-      ...data.itinerary,
-      { day: data.itinerary.length + 1, date: "", title: "", description: "", hotel: "", meals: "", transport: "" },
-    ]);
-  const updDay = (i: number, k: keyof ItineraryDay, v: string | number) => {
-    const a = [...data.itinerary]; a[i] = { ...a[i], [k]: v as any }; set("itinerary", a);
-  };
-  const rmDay = (i: number) => set("itinerary", data.itinerary.filter((_, x) => x !== i).map((d, x) => ({ ...d, day: x + 1 })));
+  const removeListItem = (key: string, idx: number) =>
+    setForm((f: any) => ({
+      ...f,
+      [key]: (f[key] || []).filter((_: any, i: number) => i !== idx),
+    }));
 
-  // Payments
-  const addPay = () => set("payments", [...data.payments, { label: "", amount: "", meta: "", via: "" }]);
-  const updPay = (i: number, k: keyof PaymentInst, v: string) => {
-    const a = [...data.payments]; a[i] = { ...a[i], [k]: v }; set("payments", a);
-  };
-  const rmPay = (i: number) => set("payments", data.payments.filter((_, x) => x !== i));
-
-  const onSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!data.client_name.trim() || !data.destination.trim()) {
-      toast.error("Client name and destination are required");
-      return;
-    }
-    const payload = {
-      ...data,
-      slug: data.slug.trim() || slugify(data.client_name),
-      inclusions: (data.inclusions || []).filter((x) => x.trim()),
-      exclusions: (data.exclusions || []).filter((x) => x.trim()),
-      activities: (data.activities || []).filter((x) => x.trim()),
-    };
     setSaving(true);
     try {
-      if (isEdit && id) {
-        await updateTrip(id, payload);
-        toast.success("Trip updated");
-      } else {
-        const t = await createTrip(payload);
-        toast.success(`Trip created at /trip/${t.slug}`);
+      const slug = form.slug || slugify(form.client_name);
+      const payload: any = { ...form, slug };
+      if (!isEdit) {
+        const { data: { user } } = await supabase.auth.getUser();
+        payload.created_by = user?.id;
       }
-      navigate("/admin-7823-secure-panel/trips");
-    } catch (e: any) {
-      toast.error(e.message || "Failed to save");
+      // Strip db-managed fields
+      delete payload.created_at;
+      delete payload.updated_at;
+      if (!isEdit) delete payload.id;
+
+      const query = isEdit
+        ? supabase.from("trips").update(payload).eq("id", id!)
+        : supabase.from("trips").insert(payload);
+      const { error } = await query;
+      if (error) throw error;
+      toast({
+        title: isEdit ? "Trip updated" : "Trip created",
+        description: `Page available at /trip/${slug}`,
+      });
+      navigate("/admin");
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <AdminLayout title="Loading..."><div className="text-slate-400">Loading trip...</div></AdminLayout>;
+  if (authLoading || loading) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+  if (!isAdmin) return null;
 
   return (
-    <AdminLayout title={isEdit ? "Edit Trip" : "Create Trip"}>
-      <form onSubmit={onSubmit} className="space-y-5 max-w-5xl">
-        <div className="flex items-center justify-between">
-          <Button asChild type="button" variant="ghost" size="sm">
-            <Link to="/admin-7823-secure-panel/trips"><ArrowLeft className="w-4 h-4 mr-1" /> Back</Link>
+    <main className="min-h-screen bg-gradient-soft pb-20">
+      <header className="bg-background border-b border-border sticky top-0 z-30">
+        <div className="container-custom flex items-center justify-between py-4 px-4 md:px-8">
+          <Button asChild variant="ghost" className="rounded-full">
+            <Link to="/admin">
+              <ArrowLeft className="w-4 h-4 mr-1" /> Back
+            </Link>
           </Button>
-          <Button type="submit" disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">
-            <Save className="w-4 h-4 mr-2" /> {saving ? "Saving..." : isEdit ? "Update Trip" : "Create Trip"}
+          <Button
+            onClick={handleSubmit}
+            disabled={saving}
+            className="bg-gradient-primary text-secondary-foreground hover:opacity-95 rounded-full h-11 px-6"
+          >
+            <Save className="w-4 h-4 mr-1" /> {saving ? "Saving..." : "Save Trip"}
           </Button>
         </div>
+      </header>
 
-        <Section title="Client & Destination">
-          <div className="grid md:grid-cols-2 gap-3">
+      <form onSubmit={handleSubmit} className="container-custom px-4 md:px-8 py-10 space-y-8 max-w-5xl">
+        <div>
+          <h1 className="heading-lg">{isEdit ? "Edit Trip" : "Create New Trip"}</h1>
+          <p className="text-muted-foreground mt-2">Fill in details. Page generates automatically.</p>
+        </div>
+
+        {/* Basics */}
+        <Section title="Client & Trip Basics">
+          <Grid>
             <Field label="Client Name *">
-              <Input value={data.client_name} onChange={(e) => set("client_name", e.target.value)} required />
+              <Input required value={form.client_name} onChange={(e) => set("client_name", e.target.value)} />
             </Field>
-            <Field label="Unique Client ID / Slug">
-              <Input value={data.slug} onChange={(e) => set("slug", e.target.value.toLowerCase().replace(/\s+/g, ""))} placeholder="auto-generated" />
+            <Field label="Unique Client ID (slug) — auto if blank">
+              <Input
+                value={form.slug}
+                onChange={(e) => set("slug", e.target.value.replace(/[^a-z0-9-]/gi, "").toLowerCase())}
+                placeholder="e.g. amitsutar1234"
+              />
             </Field>
             <Field label="Destination *">
-              <Input value={data.destination} onChange={(e) => set("destination", e.target.value)} required />
-            </Field>
-            <Field label="Hero Image URL">
-              <Input value={data.hero_image || ""} onChange={(e) => set("hero_image", e.target.value)} />
-            </Field>
-            <Field label="Start Date">
-              <Input type="date" value={data.start_date || ""} onChange={(e) => set("start_date", e.target.value || null)} />
-            </Field>
-            <Field label="End Date">
-              <Input type="date" value={data.end_date || ""} onChange={(e) => set("end_date", e.target.value || null)} />
+              <Input required value={form.destination} onChange={(e) => set("destination", e.target.value)} />
             </Field>
             <Field label="Number of Days">
-              <Input type="number" value={data.num_days ?? ""} onChange={(e) => set("num_days", e.target.value ? Number(e.target.value) : null)} />
+              <Input
+                type="number"
+                value={form.num_days ?? ""}
+                onChange={(e) => set("num_days", e.target.value ? parseInt(e.target.value) : null)}
+              />
             </Field>
-            <Field label="Total Cost (₹)">
-              <Input type="number" value={data.total_cost ?? ""} onChange={(e) => set("total_cost", e.target.value ? Number(e.target.value) : null)} />
+            <Field label="Start Date">
+              <Input
+                type="date"
+                value={form.start_date ?? ""}
+                onChange={(e) => set("start_date", e.target.value || null)}
+              />
             </Field>
-          </div>
-          <Field label="Overview">
-            <Textarea rows={3} value={data.overview || ""} onChange={(e) => set("overview", e.target.value)} />
+            <Field label="End Date">
+              <Input
+                type="date"
+                value={form.end_date ?? ""}
+                onChange={(e) => set("end_date", e.target.value || null)}
+              />
+            </Field>
+            <Field label="Budget (₹)">
+              <Input
+                type="number"
+                value={form.budget ?? ""}
+                onChange={(e) => set("budget", e.target.value ? parseFloat(e.target.value) : null)}
+              />
+            </Field>
+            <Field label="Total Package Cost (₹)">
+              <Input
+                type="number"
+                value={form.total_cost ?? ""}
+                onChange={(e) => set("total_cost", e.target.value ? parseFloat(e.target.value) : null)}
+              />
+            </Field>
+          </Grid>
+          <Field label="Hero Image URL (optional)">
+            <Input
+              value={form.hero_image ?? ""}
+              onChange={(e) => set("hero_image", e.target.value || null)}
+              placeholder="https://..."
+            />
+          </Field>
+          <Field label="Overview / Description">
+            <Textarea
+              rows={3}
+              value={form.overview ?? ""}
+              onChange={(e) => set("overview", e.target.value || null)}
+            />
           </Field>
         </Section>
 
-        <Section title="Hotels">
-          {data.hotels.map((h, i) => (
-            <div key={i} className="grid md:grid-cols-[1fr_1fr_2fr_auto] gap-2 items-end p-3 rounded-lg bg-slate-50">
-              <Input placeholder="City" value={h.city} onChange={(e) => updHotel(i, "city", e.target.value)} />
-              <Input placeholder="Hotel name" value={h.name} onChange={(e) => updHotel(i, "name", e.target.value)} />
-              <Input placeholder="Note" value={h.note || ""} onChange={(e) => updHotel(i, "note", e.target.value)} />
-              <Button type="button" size="icon" variant="ghost" onClick={() => rmHotel(i)}><Trash2 className="w-4 h-4 text-red-500" /></Button>
-            </div>
-          ))}
-          <AddBtn onClick={addHotel}>Add Hotel</AddBtn>
+        {/* Transport */}
+        <Section title="Transport Details">
+          <Field label="Transport summary (e.g. Train + 17 Seater Tempo)">
+            <Textarea
+              rows={2}
+              value={form.transport?.details ?? ""}
+              onChange={(e) => set("transport", { ...form.transport, details: e.target.value })}
+            />
+          </Field>
         </Section>
 
-        <Section title="Transport">
+        {/* Day-wise Itinerary */}
+        <Section
+          title="Day-wise Itinerary"
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              onClick={() =>
+                addListItem("itinerary", {
+                  day: (form.itinerary?.length || 0) + 1,
+                  date: "",
+                  title: "",
+                  description: "",
+                })
+              }
+            >
+              <Plus className="w-4 h-4 mr-1" /> Add Day
+            </Button>
+          }
+        >
+          {(form.itinerary as ItineraryDay[]).map((d, i) => (
+            <div key={i} className="rounded-2xl border border-border p-4 space-y-3 bg-background">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-secondary">Day {d.day}</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive"
+                  onClick={() => removeListItem("itinerary", i)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+              <Grid>
+                <Input
+                  placeholder="Day #"
+                  type="number"
+                  value={d.day}
+                  onChange={(e) => setListItem("itinerary", i, { ...d, day: parseInt(e.target.value) || 0 })}
+                />
+                <Input
+                  placeholder="Date (e.g. 22 May 2026)"
+                  value={d.date}
+                  onChange={(e) => setListItem("itinerary", i, { ...d, date: e.target.value })}
+                />
+              </Grid>
+              <Input
+                placeholder="Title"
+                value={d.title}
+                onChange={(e) => setListItem("itinerary", i, { ...d, title: e.target.value })}
+              />
+              <Textarea
+                rows={2}
+                placeholder="Description"
+                value={d.description}
+                onChange={(e) => setListItem("itinerary", i, { ...d, description: e.target.value })}
+              />
+              <Grid cols={3}>
+                <Input
+                  placeholder="Hotel (optional)"
+                  value={d.hotel ?? ""}
+                  onChange={(e) => setListItem("itinerary", i, { ...d, hotel: e.target.value })}
+                />
+                <Input
+                  placeholder="Meals (optional)"
+                  value={d.meals ?? ""}
+                  onChange={(e) => setListItem("itinerary", i, { ...d, meals: e.target.value })}
+                />
+                <Input
+                  placeholder="Transport (optional)"
+                  value={d.transport ?? ""}
+                  onChange={(e) => setListItem("itinerary", i, { ...d, transport: e.target.value })}
+                />
+              </Grid>
+            </div>
+          ))}
+        </Section>
+
+        {/* Hotels */}
+        <Section
+          title="Hotels"
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              onClick={() => addListItem("hotels", { city: "", name: "", note: "" })}
+            >
+              <Plus className="w-4 h-4 mr-1" /> Add Hotel
+            </Button>
+          }
+        >
+          {(form.hotels as HotelEntry[]).map((h, i) => (
+            <div key={i} className="grid md:grid-cols-[1fr_2fr_2fr_auto] gap-2 items-start">
+              <Input
+                placeholder="City"
+                value={h.city}
+                onChange={(e) => setListItem("hotels", i, { ...h, city: e.target.value })}
+              />
+              <Input
+                placeholder="Hotel name"
+                value={h.name}
+                onChange={(e) => setListItem("hotels", i, { ...h, name: e.target.value })}
+              />
+              <Input
+                placeholder="Note (e.g. Breakfast & Dinner)"
+                value={h.note ?? ""}
+                onChange={(e) => setListItem("hotels", i, { ...h, note: e.target.value })}
+              />
+              <Button type="button" size="icon" variant="ghost" onClick={() => removeListItem("hotels", i)}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            </div>
+          ))}
+        </Section>
+
+        {/* Activities */}
+        <Section
+          title="Activities"
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              onClick={() => addListItem("activities", "")}
+            >
+              <Plus className="w-4 h-4 mr-1" /> Add
+            </Button>
+          }
+        >
+          {(form.activities as string[]).map((a, i) => (
+            <div key={i} className="flex gap-2">
+              <Input value={a} onChange={(e) => setListItem("activities", i, e.target.value)} />
+              <Button type="button" size="icon" variant="ghost" onClick={() => removeListItem("activities", i)}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            </div>
+          ))}
+        </Section>
+
+        {/* Inclusions / Exclusions */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <Section
+            title="Inclusions"
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={() => addListItem("inclusions", "")}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            }
+          >
+            {(form.inclusions as string[]).map((s, i) => (
+              <div key={i} className="flex gap-2">
+                <Input value={s} onChange={(e) => setListItem("inclusions", i, e.target.value)} />
+                <Button type="button" size="icon" variant="ghost" onClick={() => removeListItem("inclusions", i)}>
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+          </Section>
+          <Section
+            title="Exclusions"
+            action={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="rounded-full"
+                onClick={() => addListItem("exclusions", "")}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            }
+          >
+            {(form.exclusions as string[]).map((s, i) => (
+              <div key={i} className="flex gap-2">
+                <Input value={s} onChange={(e) => setListItem("exclusions", i, e.target.value)} />
+                <Button type="button" size="icon" variant="ghost" onClick={() => removeListItem("exclusions", i)}>
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+          </Section>
+        </div>
+
+        {/* Payments */}
+        <Section
+          title="Payment Schedule"
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              onClick={() => addListItem("payments", { label: "", amount: "", meta: "", via: "" })}
+            >
+              <Plus className="w-4 h-4 mr-1" /> Add Installment
+            </Button>
+          }
+        >
+          {(form.payments as PaymentInst[]).map((p, i) => (
+            <div key={i} className="grid md:grid-cols-[1fr_1fr_2fr_2fr_auto] gap-2">
+              <Input
+                placeholder="Label (e.g. 1st)"
+                value={p.label}
+                onChange={(e) => setListItem("payments", i, { ...p, label: e.target.value })}
+              />
+              <Input
+                placeholder="Amount (₹90,000)"
+                value={p.amount}
+                onChange={(e) => setListItem("payments", i, { ...p, amount: e.target.value })}
+              />
+              <Input
+                placeholder="Date / meta"
+                value={p.meta ?? ""}
+                onChange={(e) => setListItem("payments", i, { ...p, meta: e.target.value })}
+              />
+              <Input
+                placeholder="Via / note"
+                value={p.via ?? ""}
+                onChange={(e) => setListItem("payments", i, { ...p, via: e.target.value })}
+              />
+              <Button type="button" size="icon" variant="ghost" onClick={() => removeListItem("payments", i)}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            </div>
+          ))}
+        </Section>
+
+        {/* Notes */}
+        <Section title="Notes / Special Instructions">
           <Textarea
-            rows={3}
-            placeholder="Train / flight / bus details"
-            value={data.transport?.details || ""}
-            onChange={(e) => set("transport", { details: e.target.value })}
+            rows={4}
+            value={form.notes ?? ""}
+            onChange={(e) => set("notes", e.target.value || null)}
           />
         </Section>
 
-        <Section title="Day-wise Itinerary">
-          {data.itinerary.map((d, i) => (
-            <div key={i} className="p-4 rounded-lg bg-slate-50 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-emerald-700">Day {d.day}</span>
-                <Button type="button" size="icon" variant="ghost" onClick={() => rmDay(i)}><Trash2 className="w-4 h-4 text-red-500" /></Button>
-              </div>
-              <div className="grid md:grid-cols-2 gap-2">
-                <Input placeholder="Date" value={d.date} onChange={(e) => updDay(i, "date", e.target.value)} />
-                <Input placeholder="Title" value={d.title} onChange={(e) => updDay(i, "title", e.target.value)} />
-              </div>
-              <Textarea rows={2} placeholder="Description" value={d.description} onChange={(e) => updDay(i, "description", e.target.value)} />
-              <div className="grid md:grid-cols-3 gap-2">
-                <Input placeholder="Hotel" value={d.hotel || ""} onChange={(e) => updDay(i, "hotel", e.target.value)} />
-                <Input placeholder="Meals" value={d.meals || ""} onChange={(e) => updDay(i, "meals", e.target.value)} />
-                <Input placeholder="Transport" value={d.transport || ""} onChange={(e) => updDay(i, "transport", e.target.value)} />
-              </div>
-            </div>
-          ))}
-          <AddBtn onClick={addDay}>Add Day</AddBtn>
-        </Section>
-
-        <div className="grid md:grid-cols-2 gap-5">
-          <StringArrSection title="Inclusions" items={data.inclusions} onAdd={() => addString("inclusions")} onUpd={(i, v) => updateStringArr("inclusions", i, v)} onRm={(i) => removeString("inclusions", i)} />
-          <StringArrSection title="Exclusions" items={data.exclusions} onAdd={() => addString("exclusions")} onUpd={(i, v) => updateStringArr("exclusions", i, v)} onRm={(i) => removeString("exclusions", i)} />
-        </div>
-
-        <StringArrSection title="Activities" items={data.activities} onAdd={() => addString("activities")} onUpd={(i, v) => updateStringArr("activities", i, v)} onRm={(i) => removeString("activities", i)} />
-
-        <Section title="Payment Installments">
-          {data.payments.map((p, i) => (
-            <div key={i} className="grid md:grid-cols-[1fr_1fr_1fr_1fr_auto] gap-2 items-end p-3 rounded-lg bg-slate-50">
-              <Input placeholder="Label (1st, 2nd...)" value={p.label} onChange={(e) => updPay(i, "label", e.target.value)} />
-              <Input placeholder="Amount" value={p.amount} onChange={(e) => updPay(i, "amount", e.target.value)} />
-              <Input placeholder="Meta (due date...)" value={p.meta || ""} onChange={(e) => updPay(i, "meta", e.target.value)} />
-              <Input placeholder="Via (UPI/Bank)" value={p.via || ""} onChange={(e) => updPay(i, "via", e.target.value)} />
-              <Button type="button" size="icon" variant="ghost" onClick={() => rmPay(i)}><Trash2 className="w-4 h-4 text-red-500" /></Button>
-            </div>
-          ))}
-          <AddBtn onClick={addPay}>Add Installment</AddBtn>
-        </Section>
-
-        <Section title="Notes / Special Instructions">
-          <Textarea rows={4} value={data.notes || ""} onChange={(e) => set("notes", e.target.value)} />
-        </Section>
-
-        <div className="flex justify-end pt-2">
-          <Button type="submit" disabled={saving} size="lg" className="bg-emerald-600 hover:bg-emerald-700">
-            <Save className="w-4 h-4 mr-2" /> {saving ? "Saving..." : isEdit ? "Update Trip" : "Create Trip"}
-          </Button>
-        </div>
+        <Button
+          type="submit"
+          disabled={saving}
+          className="w-full bg-gradient-primary text-secondary-foreground hover:opacity-95 rounded-full h-14 text-base font-semibold"
+        >
+          <Save className="w-5 h-5 mr-1" /> {saving ? "Saving..." : isEdit ? "Update Trip" : "Create Trip Page"}
+        </Button>
       </form>
-    </AdminLayout>
+    </main>
   );
 };
 
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="space-y-1.5">
-    <Label className="text-xs font-semibold text-slate-600">{label}</Label>
-    {children}
+const Section = ({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) => (
+  <div className="card-elegant p-6 md:p-8">
+    <div className="flex items-center justify-between mb-5">
+      <h2 className="text-xl font-bold text-primary">{title}</h2>
+      {action}
+    </div>
+    <div className="space-y-4">{children}</div>
   </div>
 );
 
-const AddBtn = ({ onClick, children }: { onClick: () => void; children: React.ReactNode }) => (
-  <Button type="button" variant="outline" size="sm" onClick={onClick} className="border-dashed border-emerald-300 text-emerald-700 hover:bg-emerald-50">
-    <Plus className="w-4 h-4 mr-1" /> {children}
-  </Button>
+const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div>
+    <Label className="text-sm font-semibold text-primary">{label}</Label>
+    <div className="mt-1.5">{children}</div>
+  </div>
 );
 
-const StringArrSection = ({
-  title, items, onAdd, onUpd, onRm,
-}: { title: string; items: string[]; onAdd: () => void; onUpd: (i: number, v: string) => void; onRm: (i: number) => void }) => (
-  <Section title={title}>
-    {items.map((v, i) => (
-      <div key={i} className="flex gap-2">
-        <Input value={v} onChange={(e) => onUpd(i, e.target.value)} />
-        <Button type="button" size="icon" variant="ghost" onClick={() => onRm(i)}><Trash2 className="w-4 h-4 text-red-500" /></Button>
-      </div>
-    ))}
-    <AddBtn onClick={onAdd}>Add {title.slice(0, -1)}</AddBtn>
-  </Section>
+const Grid = ({ children, cols = 2 }: { children: React.ReactNode; cols?: 2 | 3 }) => (
+  <div className={`grid grid-cols-1 gap-4 ${cols === 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>{children}</div>
 );
 
 export default AdminTripForm;

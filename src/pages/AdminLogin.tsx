@@ -1,13 +1,11 @@
-import { useState, FormEvent } from "react";
-import { useNavigate, Navigate } from "react-router-dom";
-import { Card } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Lock, ShieldAlert } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import logo from "@/assets/logo.png";
-import { adminLogin, isAdminAuthed } from "@/lib/adminAuth";
+import { isAdminSignedIn, signInAdmin } from "@/lib/adminAuth";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -15,70 +13,66 @@ const AdminLogin = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
-  if (isAdminAuthed()) return <Navigate to="/admin-7823-secure-panel/dashboard" replace />;
+  useEffect(() => {
+    if (isAdminSignedIn()) navigate("/admin", { replace: true });
+  }, [navigate]);
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (adminLogin(username, password)) {
-      navigate("/admin-7823-secure-panel/dashboard");
+    setError("");
+    if (signInAdmin(username, password)) {
+      navigate("/admin", { replace: true });
     } else {
-      setError("Invalid Admin Credentials");
+      setError("Invalid username or password.");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-white to-emerald-100 px-4">
-      <Card className="w-full max-w-md p-8 shadow-2xl border-emerald-100">
-        <div className="flex flex-col items-center text-center mb-6">
-          <img src={logo} alt="Easy Trip India" className="h-16 object-contain mb-4" />
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-600/10 text-emerald-700 text-xs font-bold tracking-widest">
-            <Lock className="w-3 h-3" /> ADMIN PORTAL
+    <main className="min-h-screen flex items-center justify-center bg-gradient-soft px-4">
+      <div className="w-full max-w-md card-elegant p-8">
+        <div className="flex flex-col items-center text-center mb-8">
+          <img src={logo} alt="EasyTrip India" className="h-16 object-contain mb-4" />
+          <div className="inline-flex items-center gap-2 text-secondary text-xs font-bold uppercase tracking-widest">
+            <ShieldCheck className="w-4 h-4" /> Admin Portal
           </div>
-          <h1 className="mt-4 text-2xl font-bold text-slate-900">Admin Login</h1>
-          <p className="text-sm text-slate-500 mt-1 flex items-center gap-1">
-            <ShieldAlert className="w-3.5 h-3.5" /> Restricted access
-          </p>
+          <h1 className="heading-md mt-2">Admin Login</h1>
+          <p className="text-muted-foreground text-sm mt-2">Restricted access</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
+          <div>
             <Label htmlFor="username">Username</Label>
             <Input
               id="username"
-              type="text"
+              autoComplete="username"
+              required
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              autoComplete="off"
-              required
+              className="mt-1"
             />
           </div>
-          <div className="space-y-2">
+          <div>
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
               type="password"
+              autoComplete="current-password"
+              required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              autoComplete="off"
-              required
+              className="mt-1"
             />
           </div>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
+          {error && <p className="text-sm text-destructive">{error}</p>}
           <Button
             type="submit"
-            className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold h-11"
+            className="w-full bg-gradient-primary text-secondary-foreground hover:opacity-95 rounded-full h-12 font-semibold"
           >
             Sign In
           </Button>
         </form>
-      </Card>
-    </div>
+      </div>
+    </main>
   );
 };
 

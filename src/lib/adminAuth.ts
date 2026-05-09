@@ -1,15 +1,20 @@
-const KEY = "easytrip_admin_session";
-const USERNAME = "EasyTrip@4328";
-const PASSWORD = "fTP5kf2N0U";
+// Simple session-based admin gate. NOT cryptographically secure — the admin
+// panel is intentionally protected only by a secret URL + hardcoded credentials,
+// per product requirements (no Supabase Auth).
 
-export const adminLogin = (u: string, p: string): boolean => {
-  if (u.trim() === USERNAME && p.trim() === PASSWORD) {
-    sessionStorage.setItem(KEY, "1");
+export const ADMIN_USERNAME = "easytripadmin";
+export const ADMIN_PASSWORD = "EasyTrip@2026";
+export const ADMIN_SECRET_PATH = "/admin-7823-secure-panel";
+const STORAGE_KEY = "etin_admin_session";
+
+export const signInAdmin = (username: string, password: string) => {
+  if (username.trim() === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+    sessionStorage.setItem(STORAGE_KEY, "1");
     return true;
   }
   return false;
 };
 
-export const isAdminAuthed = (): boolean => sessionStorage.getItem(KEY) === "1";
+export const isAdminSignedIn = () => sessionStorage.getItem(STORAGE_KEY) === "1";
 
-export const adminLogout = (): void => sessionStorage.removeItem(KEY);
+export const signOutAdmin = () => sessionStorage.removeItem(STORAGE_KEY);

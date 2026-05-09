@@ -1,14 +1,6 @@
 import logo from "@/assets/logo.png";
 import { Mail, Globe, Phone } from "lucide-react";
 
-const footerNav = [
-  { label: "Home", href: "#top" },
-  { label: "Destinations", href: "#itinerary" },
-  { label: "Trips", href: "#hotels" },
-  { label: "About Us", href: "#about" },
-  { label: "Contact Us", href: "#footer-contact" },
-];
-
 const Footer = () => {
   return (
     <footer className="bg-gradient-dark text-white pt-16 pb-24 md:pb-12 px-4 md:px-8">
@@ -54,17 +46,8 @@ const Footer = () => {
         </div>
       </div>
 
-      <div className="container-custom mt-12 pt-8 border-t border-white/10">
-        <nav className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-sm text-white/80">
-          {footerNav.map((l) => (
-            <a key={l.label} href={l.href} className="hover:text-warning transition-colors">
-              {l.label}
-            </a>
-          ))}
-        </nav>
-        <p className="mt-6 text-center text-white/50 text-sm">
-          © {new Date().getFullYear()} EasyTrip India. All rights reserved. · Crafted with care for every traveller.
-        </p>
+      <div className="container-custom mt-12 pt-8 border-t border-white/10 text-center text-white/50 text-sm">
+        © {new Date().getFullYear()} EasyTrip India. All rights reserved. · Crafted with care for every traveller.
       </div>
     </footer>
   );
