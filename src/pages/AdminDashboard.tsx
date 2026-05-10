@@ -47,6 +47,7 @@ const AdminDashboard = () => {
 
   const handleSignOut = () => {
     signOutAdmin();
+    toast({ title: "Signed out", description: "You have been logged out." });
     navigate(ADMIN_SECRET_PATH);
   };
 
