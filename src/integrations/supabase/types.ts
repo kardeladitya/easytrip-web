@@ -34,14 +34,18 @@ export type Database = {
       }
       trips: {
         Row: {
+          about: Json | null
           activities: Json | null
           budget: number | null
+          checklist: Json | null
           client_name: string
+          climate: Json | null
           created_at: string
           created_by: string | null
           destination: string
           end_date: string | null
           exclusions: Json | null
+          guidelines: Json | null
           hero_image: string | null
           hotels: Json | null
           id: string
@@ -49,23 +53,32 @@ export type Database = {
           itinerary: Json | null
           notes: string | null
           num_days: number | null
+          num_nights: number | null
           overview: string | null
+          payment_qr_url: string | null
           payments: Json | null
           slug: string
           start_date: string | null
+          terms: string | null
+          tipping: Json | null
           total_cost: number | null
           transport: Json | null
+          transport_items: Json | null
           updated_at: string
         }
         Insert: {
+          about?: Json | null
           activities?: Json | null
           budget?: number | null
+          checklist?: Json | null
           client_name: string
+          climate?: Json | null
           created_at?: string
           created_by?: string | null
           destination: string
           end_date?: string | null
           exclusions?: Json | null
+          guidelines?: Json | null
           hero_image?: string | null
           hotels?: Json | null
           id?: string
@@ -73,23 +86,32 @@ export type Database = {
           itinerary?: Json | null
           notes?: string | null
           num_days?: number | null
+          num_nights?: number | null
           overview?: string | null
+          payment_qr_url?: string | null
           payments?: Json | null
           slug: string
           start_date?: string | null
+          terms?: string | null
+          tipping?: Json | null
           total_cost?: number | null
           transport?: Json | null
+          transport_items?: Json | null
           updated_at?: string
         }
         Update: {
+          about?: Json | null
           activities?: Json | null
           budget?: number | null
+          checklist?: Json | null
           client_name?: string
+          climate?: Json | null
           created_at?: string
           created_by?: string | null
           destination?: string
           end_date?: string | null
           exclusions?: Json | null
+          guidelines?: Json | null
           hero_image?: string | null
           hotels?: Json | null
           id?: string
@@ -97,12 +119,17 @@ export type Database = {
           itinerary?: Json | null
           notes?: string | null
           num_days?: number | null
+          num_nights?: number | null
           overview?: string | null
+          payment_qr_url?: string | null
           payments?: Json | null
           slug?: string
           start_date?: string | null
+          terms?: string | null
+          tipping?: Json | null
           total_cost?: number | null
           transport?: Json | null
+          transport_items?: Json | null
           updated_at?: string
         }
         Relationships: []
