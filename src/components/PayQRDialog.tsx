@@ -1,14 +1,15 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import qr from "@/assets/upi-qr.jpeg";
+import defaultQr from "@/assets/upi-qr.jpeg";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   amount?: string;
   title?: string;
+  qrUrl?: string | null;
 };
 
-const PayQRDialog = ({ open, onOpenChange, amount, title = "Scan to Pay" }: Props) => {
+const PayQRDialog = ({ open, onOpenChange, amount, title = "Scan to Pay", qrUrl }: Props) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm rounded-3xl">
@@ -24,7 +25,7 @@ const PayQRDialog = ({ open, onOpenChange, amount, title = "Scan to Pay" }: Prop
         </DialogHeader>
         <div className="flex flex-col items-center gap-4">
           <img
-            src={qr}
+            src={qrUrl || defaultQr}
             alt="UPI QR code for Shlok Pravin Bagore"
             className="w-full max-w-xs rounded-2xl shadow-card"
           />
