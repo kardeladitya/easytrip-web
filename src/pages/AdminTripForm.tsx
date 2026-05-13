@@ -7,8 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Plus, Trash2, Save } from "lucide-react";
-import { emptyTrip, slugify, type ItineraryDay, type HotelEntry, type PaymentInst } from "@/lib/tripTypes";
+import { ArrowLeft, Plus, Trash2, Save, Upload } from "lucide-react";
+import {
+  emptyTrip,
+  slugify,
+  type ItineraryDay,
+  type HotelEntry,
+  type PaymentInst,
+  type TransportItem,
+  type ChecklistGroup,
+  type GuidelineItem,
+} from "@/lib/tripTypes";
 
 const AdminTripForm = () => {
   const { id } = useParams();
@@ -19,6 +28,7 @@ const AdminTripForm = () => {
 
   const [form, setForm] = useState<any>(emptyTrip());
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(isEdit);
 
   useEffect(() => {
@@ -34,12 +44,15 @@ const AdminTripForm = () => {
           navigate("/admin");
           return;
         }
-        setForm(data);
+        // Backfill any new optional fields so inputs are controlled
+        setForm({ ...emptyTrip(), ...data });
         setLoading(false);
       });
   }, [id, isEdit, navigate, toast]);
 
   const set = (k: string, v: any) => setForm((f: any) => ({ ...f, [k]: v }));
+  const setNested = (k: string, sub: string, v: any) =>
+    setForm((f: any) => ({ ...f, [k]: { ...(f[k] || {}), [sub]: v } }));
 
   const setListItem = (key: string, idx: number, value: any) => {
     setForm((f: any) => {
@@ -58,6 +71,26 @@ const AdminTripForm = () => {
       [key]: (f[key] || []).filter((_: any, i: number) => i !== idx),
     }));
 
+  const handleQrUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `qr/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("trip-assets").upload(path, file, {
+        cacheControl: "3600",
+        upsert: false,
+      });
+      if (error) throw error;
+      const { data } = supabase.storage.from("trip-assets").getPublicUrl(path);
+      set("payment_qr_url", data.publicUrl);
+      toast({ title: "QR uploaded", description: "Payment QR image updated." });
+    } catch (err: any) {
+      toast({ title: "Upload failed", description: err.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
@@ -68,7 +101,6 @@ const AdminTripForm = () => {
         const { data: { user } } = await supabase.auth.getUser();
         payload.created_by = user?.id;
       }
-      // Strip db-managed fields
       delete payload.created_at;
       delete payload.updated_at;
       if (!isEdit) delete payload.id;
@@ -143,6 +175,13 @@ const AdminTripForm = () => {
                 onChange={(e) => set("num_days", e.target.value ? parseInt(e.target.value) : null)}
               />
             </Field>
+            <Field label="Number of Nights">
+              <Input
+                type="number"
+                value={form.num_nights ?? ""}
+                onChange={(e) => set("num_nights", e.target.value ? parseInt(e.target.value) : null)}
+              />
+            </Field>
             <Field label="Start Date">
               <Input
                 type="date"
@@ -179,7 +218,7 @@ const AdminTripForm = () => {
               placeholder="https://..."
             />
           </Field>
-          <Field label="Overview / Description">
+          <Field label="Overview / Short Description (hero subtitle)">
             <Textarea
               rows={3}
               value={form.overview ?? ""}
@@ -188,13 +227,20 @@ const AdminTripForm = () => {
           </Field>
         </Section>
 
-        {/* Transport */}
-        <Section title="Transport Details">
-          <Field label="Transport summary (e.g. Train + 17 Seater Tempo)">
+        {/* About */}
+        <Section title="About Section">
+          <Field label="Heading">
+            <Input
+              value={form.about?.heading ?? ""}
+              onChange={(e) => setNested("about", "heading", e.target.value)}
+              placeholder="e.g. Trusted by Thousands of Indian Travellers"
+            />
+          </Field>
+          <Field label="Description (rich text — supports line breaks)">
             <Textarea
-              rows={2}
-              value={form.transport?.details ?? ""}
-              onChange={(e) => set("transport", { ...form.transport, details: e.target.value })}
+              rows={6}
+              value={form.about?.body ?? ""}
+              onChange={(e) => setNested("about", "body", e.target.value)}
             />
           </Field>
         </Section>
@@ -280,6 +326,82 @@ const AdminTripForm = () => {
           ))}
         </Section>
 
+        {/* Transport Info (structured) */}
+        <Section
+          title="Transport Info (Train / Cruise / Cab / Bus / Flight)"
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              onClick={() =>
+                addListItem("transport_items", { type: "Train", name: "", timing: "", details: "", notes: "" })
+              }
+            >
+              <Plus className="w-4 h-4 mr-1" /> Add Transport
+            </Button>
+          }
+        >
+          <Field label="Optional one-line transport summary">
+            <Input
+              value={form.transport?.details ?? ""}
+              onChange={(e) => set("transport", { ...form.transport, details: e.target.value })}
+              placeholder="e.g. Train + 17 Seater Tempo"
+            />
+          </Field>
+          {(form.transport_items as TransportItem[]).map((t, i) => (
+            <div key={i} className="rounded-2xl border border-border p-4 space-y-3 bg-background">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-bold text-secondary">{t.type || "Transport"} #{i + 1}</span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive"
+                  onClick={() => removeListItem("transport_items", i)}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+              <Grid>
+                <select
+                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  value={t.type}
+                  onChange={(e) => setListItem("transport_items", i, { ...t, type: e.target.value })}
+                >
+                  {["Train", "Cruise", "Cab", "Bus", "Flight"].map((o) => (
+                    <option key={o} value={o}>{o}</option>
+                  ))}
+                </select>
+                <Input
+                  placeholder="Name / Number (e.g. 12101 Mumbai Mail)"
+                  value={t.name ?? ""}
+                  onChange={(e) => setListItem("transport_items", i, { ...t, name: e.target.value })}
+                />
+              </Grid>
+              <Grid>
+                <Input
+                  placeholder="Timing (e.g. Dep 22:30 · Arr 06:15)"
+                  value={t.timing ?? ""}
+                  onChange={(e) => setListItem("transport_items", i, { ...t, timing: e.target.value })}
+                />
+                <Input
+                  placeholder="Route / Details"
+                  value={t.details ?? ""}
+                  onChange={(e) => setListItem("transport_items", i, { ...t, details: e.target.value })}
+                />
+              </Grid>
+              <Textarea
+                rows={2}
+                placeholder="Notes"
+                value={t.notes ?? ""}
+                onChange={(e) => setListItem("transport_items", i, { ...t, notes: e.target.value })}
+              />
+            </div>
+          ))}
+        </Section>
+
         {/* Hotels */}
         <Section
           title="Hotels"
@@ -342,6 +464,170 @@ const AdminTripForm = () => {
               </Button>
             </div>
           ))}
+        </Section>
+
+        {/* Must Carry Checklist */}
+        <Section
+          title="Must-Carry Checklist"
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              onClick={() => addListItem("checklist", { title: "", items: [""] })}
+            >
+              <Plus className="w-4 h-4 mr-1" /> Add Group
+            </Button>
+          }
+        >
+          {(form.checklist as ChecklistGroup[]).map((g, gi) => (
+            <div key={gi} className="rounded-2xl border border-border p-4 space-y-3 bg-background">
+              <div className="flex items-center justify-between gap-2">
+                <Input
+                  placeholder="Group title (e.g. Documents, Clothing)"
+                  value={g.title}
+                  onChange={(e) => setListItem("checklist", gi, { ...g, title: e.target.value })}
+                />
+                <Button type="button" size="icon" variant="ghost" onClick={() => removeListItem("checklist", gi)}>
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {(g.items || []).map((it, ii) => (
+                  <div key={ii} className="flex gap-2">
+                    <Input
+                      placeholder="Item"
+                      value={it}
+                      onChange={(e) => {
+                        const items = [...g.items];
+                        items[ii] = e.target.value;
+                        setListItem("checklist", gi, { ...g, items });
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => {
+                        const items = g.items.filter((_, x) => x !== ii);
+                        setListItem("checklist", gi, { ...g, items });
+                      }}
+                    >
+                      <Trash2 className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full"
+                  onClick={() => setListItem("checklist", gi, { ...g, items: [...(g.items || []), ""] })}
+                >
+                  <Plus className="w-4 h-4 mr-1" /> Add Item
+                </Button>
+              </div>
+            </div>
+          ))}
+        </Section>
+
+        {/* Important Guidelines */}
+        <Section
+          title="Important Guidelines"
+          action={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              onClick={() => addListItem("guidelines", { text: "" })}
+            >
+              <Plus className="w-4 h-4 mr-1" /> Add Guideline
+            </Button>
+          }
+        >
+          {(form.guidelines as GuidelineItem[]).map((g, i) => (
+            <div key={i} className="flex gap-2">
+              <Textarea
+                rows={2}
+                placeholder="Guideline point"
+                value={g.text}
+                onChange={(e) => setListItem("guidelines", i, { ...g, text: e.target.value })}
+              />
+              <Button type="button" size="icon" variant="ghost" onClick={() => removeListItem("guidelines", i)}>
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            </div>
+          ))}
+        </Section>
+
+        {/* Climate */}
+        <Section title="Climate Information">
+          <Grid>
+            <Field label="Daytime Temperature">
+              <Input
+                value={form.climate?.day_temp ?? ""}
+                onChange={(e) => setNested("climate", "day_temp", e.target.value)}
+                placeholder="e.g. 10°C – 20°C"
+              />
+            </Field>
+            <Field label="Nighttime Temperature">
+              <Input
+                value={form.climate?.night_temp ?? ""}
+                onChange={(e) => setNested("climate", "night_temp", e.target.value)}
+                placeholder="e.g. 0°C – 8°C"
+              />
+            </Field>
+          </Grid>
+          <Field label="Weather Details">
+            <Textarea
+              rows={2}
+              value={form.climate?.weather ?? ""}
+              onChange={(e) => setNested("climate", "weather", e.target.value)}
+            />
+          </Field>
+          <Field label="Clothing Suggestions">
+            <Textarea
+              rows={2}
+              value={form.climate?.clothing ?? ""}
+              onChange={(e) => setNested("climate", "clothing", e.target.value)}
+            />
+          </Field>
+          <Field label="Seasonal Notes">
+            <Textarea
+              rows={2}
+              value={form.climate?.notes ?? ""}
+              onChange={(e) => setNested("climate", "notes", e.target.value)}
+            />
+          </Field>
+        </Section>
+
+        {/* Tipping */}
+        <Section title="Tipping Information">
+          <Grid>
+            <Field label="Currency">
+              <Input
+                value={form.tipping?.currency ?? ""}
+                onChange={(e) => setNested("tipping", "currency", e.target.value)}
+                placeholder="e.g. INR"
+              />
+            </Field>
+            <Field label="Suggested Amount">
+              <Input
+                value={form.tipping?.amount ?? ""}
+                onChange={(e) => setNested("tipping", "amount", e.target.value)}
+                placeholder="e.g. ₹200–500 per day"
+              />
+            </Field>
+          </Grid>
+          <Field label="Notes">
+            <Textarea
+              rows={3}
+              value={form.tipping?.notes ?? ""}
+              onChange={(e) => setNested("tipping", "notes", e.target.value)}
+            />
+          </Field>
         </Section>
 
         {/* Inclusions / Exclusions */}
@@ -438,6 +724,60 @@ const AdminTripForm = () => {
           ))}
         </Section>
 
+        {/* Payment QR */}
+        <Section title="Payment QR Image">
+          <p className="text-sm text-muted-foreground -mt-2">
+            Default QR is used if none uploaded. Upload a new image to override for this trip.
+          </p>
+          <div className="flex flex-col sm:flex-row items-start gap-4">
+            <div className="w-32 h-32 rounded-xl border border-border bg-background overflow-hidden flex items-center justify-center">
+              {form.payment_qr_url ? (
+                <img src={form.payment_qr_url} alt="QR" className="w-full h-full object-contain" />
+              ) : (
+                <span className="text-xs text-muted-foreground text-center px-2">Default QR</span>
+              )}
+            </div>
+            <div className="flex-1 space-y-2">
+              <Label className="text-sm font-semibold text-primary">
+                <span className="inline-flex items-center gap-2 cursor-pointer rounded-full border border-input px-4 py-2 hover:bg-accent">
+                  <Upload className="w-4 h-4" /> {uploading ? "Uploading..." : "Upload new QR"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploading}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) handleQrUpload(f);
+                    }}
+                  />
+                </span>
+              </Label>
+              {form.payment_qr_url && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive"
+                  onClick={() => set("payment_qr_url", null)}
+                >
+                  <Trash2 className="w-4 h-4 mr-1" /> Reset to default
+                </Button>
+              )}
+            </div>
+          </div>
+        </Section>
+
+        {/* Terms */}
+        <Section title="Terms & Important Notes">
+          <Textarea
+            rows={6}
+            value={form.terms ?? ""}
+            onChange={(e) => set("terms", e.target.value || null)}
+            placeholder="Full terms — supports line breaks. Displayed at the bottom of the trip page."
+          />
+        </Section>
+
         {/* Notes */}
         <Section title="Notes / Special Instructions">
           <Textarea
@@ -484,8 +824,8 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
   </div>
 );
 
-const Grid = ({ children, cols = 2 }: { children: React.ReactNode; cols?: 2 | 3 }) => (
-  <div className={`grid grid-cols-1 gap-4 ${cols === 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>{children}</div>
+const Grid = ({ children, cols = 2 }: { children: React.ReactNode; cols?: number }) => (
+  <div className={`grid gap-3 md:grid-cols-${cols}`}>{children}</div>
 );
 
 export default AdminTripForm;
