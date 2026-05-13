@@ -825,7 +825,7 @@ const Field = ({ label, children }: { label: string; children: React.ReactNode }
 );
 
 const Grid = ({ children, cols = 2 }: { children: React.ReactNode; cols?: number }) => (
-  <div className={`grid gap-3 md:grid-cols-${cols}`}>{children}</div>
+  <div className={`grid gap-3 ${cols === 3 ? "md:grid-cols-3" : "md:grid-cols-2"}`}>{children}</div>
 );
 
 export default AdminTripForm;
