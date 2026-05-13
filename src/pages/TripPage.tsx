@@ -7,9 +7,21 @@ import { Button } from "@/components/ui/button";
 import {
   ShieldCheck, User, Hash, Calendar, Zap, BookOpen,
   Route, Hotel, Utensils, Bus, Tag, CreditCard, Check, X, ListChecks, MapPin, Sparkles, FileText,
+  Building2, Train, Ship, Car, Plane, Backpack, AlertTriangle, Thermometer, Sun, Moon, HandCoins,
 } from "lucide-react";
 import PayQRDialog from "@/components/PayQRDialog";
-import type { Trip } from "@/lib/tripTypes";
+import type { Trip, TransportItem } from "@/lib/tripTypes";
+
+const transportIcon = (type: string) => {
+  switch ((type || "").toLowerCase()) {
+    case "train": return <Train className="w-5 h-5" />;
+    case "cruise": return <Ship className="w-5 h-5" />;
+    case "cab": return <Car className="w-5 h-5" />;
+    case "bus": return <Bus className="w-5 h-5" />;
+    case "flight": return <Plane className="w-5 h-5" />;
+    default: return <Bus className="w-5 h-5" />;
+  }
+};
 
 const TripPage = () => {
   const { slug } = useParams();
@@ -60,6 +72,22 @@ const TripPage = () => {
       : "";
   const totalAmt = trip.total_cost ? `₹${trip.total_cost.toLocaleString("en-IN")}` : "";
 
+  const durationLabel = (() => {
+    const d = trip.num_days, n = trip.num_nights;
+    if (d && n) return `${d} Days · ${n} Nights`;
+    if (d) return `${d} Days Journey`;
+    if (n) return `${n} Nights Journey`;
+    return "";
+  })();
+
+  const hasAbout = !!(trip.about?.heading || trip.about?.body);
+  const hasTransport = (trip.transport_items?.length ?? 0) > 0 || !!trip.transport?.details;
+  const hasChecklist = (trip.checklist?.length ?? 0) > 0;
+  const hasGuidelines = (trip.guidelines?.length ?? 0) > 0;
+  const hasClimate = !!(trip.climate?.day_temp || trip.climate?.night_temp || trip.climate?.weather || trip.climate?.clothing || trip.climate?.notes);
+  const hasTipping = !!(trip.tipping?.amount || trip.tipping?.notes || trip.tipping?.currency);
+  const hasTerms = !!(trip.terms && trip.terms.trim());
+
   return (
     <main className="min-h-screen bg-background">
       {/* Header */}
@@ -77,7 +105,7 @@ const TripPage = () => {
         </div>
       </header>
 
-      {/* Hero */}
+      {/* 1. Trip Title (Hero) */}
       <section id="top" className="relative min-h-[100svh] flex items-end overflow-hidden">
         <img
           src={trip.hero_image || heroDefault}
@@ -97,9 +125,9 @@ const TripPage = () => {
             </div>
             <h1 className="text-white font-extrabold leading-[1.05] tracking-tight">
               <span className="block text-4xl md:text-6xl lg:text-7xl">{trip.destination}</span>
-              {trip.num_days && (
+              {durationLabel && (
                 <span className="block text-3xl md:text-5xl lg:text-6xl mt-2 bg-gradient-gold bg-clip-text text-transparent">
-                  {trip.num_days} Days Journey
+                  {durationLabel}
                 </span>
               )}
             </h1>
@@ -138,7 +166,70 @@ const TripPage = () => {
         </div>
       </section>
 
-      {/* Itinerary */}
+      {/* 2. About */}
+      {hasAbout && (
+        <section id="about" className="section-padding bg-gradient-soft">
+          <div className="container-custom max-w-4xl">
+            <div className="section-label">
+              <Building2 className="w-4 h-4" /> About
+            </div>
+            <h2 className="heading-lg mt-4">{trip.about?.heading || "About Us"}</h2>
+            {trip.about?.body && (
+              <div className="mt-6 text-muted-foreground leading-relaxed text-lg whitespace-pre-wrap">
+                {trip.about.body}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* 3. Journey Details (hotels + activities + cost summary) */}
+      {(trip.hotels?.length > 0 || trip.activities?.length > 0) && (
+        <section id="journey" className="section-padding bg-background">
+          <div className="container-custom">
+            <div className="section-label">
+              <MapPin className="w-4 h-4" /> Journey Details
+            </div>
+            <h2 className="heading-lg mt-4">Your Journey at a Glance</h2>
+
+            {trip.hotels?.length > 0 && (
+              <div className="mt-10">
+                <h3 className="text-xl font-bold text-primary mb-5">Hotels</h3>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {trip.hotels.map((h, i) => (
+                    <div key={i} className="card-elegant p-6 text-center">
+                      <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-dark text-warning flex items-center justify-center">
+                        <MapPin className="w-6 h-6" />
+                      </div>
+                      <div className="mt-4 text-xs font-bold uppercase tracking-widest text-secondary">{h.city}</div>
+                      <div className="mt-1.5 text-lg font-bold text-primary">{h.name}</div>
+                      {h.note && <div className="mt-2 text-sm text-muted-foreground">🍴 {h.note}</div>}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {trip.activities?.length > 0 && (
+              <div className="mt-12">
+                <h3 className="text-xl font-bold text-primary mb-5 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-secondary" /> Activities & Highlights
+                </h3>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {trip.activities.map((a, i) => (
+                    <div key={i} className="card-elegant p-5 flex items-start gap-3">
+                      <Sparkles className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
+                      <span className="text-primary font-medium">{a}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* 4. Itinerary */}
       {trip.itinerary?.length > 0 && (
         <section id="itinerary" className="section-padding bg-gradient-soft">
           <div className="container-custom">
@@ -162,7 +253,7 @@ const TripPage = () => {
                         {d.date && <span className="text-sm text-muted-foreground font-medium">{d.date}</span>}
                       </div>
                       <h3 className="text-xl md:text-2xl font-bold text-primary">{d.title}</h3>
-                      <p className="mt-3 text-muted-foreground leading-relaxed">{d.description}</p>
+                      <p className="mt-3 text-muted-foreground leading-relaxed whitespace-pre-wrap">{d.description}</p>
                       <div className="mt-5 flex flex-wrap gap-2">
                         {d.hotel && <DayTag icon={<Hotel className="w-4 h-4" />} text={d.hotel} />}
                         {d.meals && (
@@ -179,48 +270,76 @@ const TripPage = () => {
         </section>
       )}
 
-      {/* Hotels */}
-      {trip.hotels?.length > 0 && (
-        <section id="hotels" className="section-padding bg-background">
+      {/* 5. Transport Info */}
+      {hasTransport && (
+        <section id="transport" className="section-padding bg-background">
           <div className="container-custom">
             <div className="section-label">
-              <Hotel className="w-4 h-4" /> Accommodation
+              <Bus className="w-4 h-4" /> Transport Info
             </div>
-            <h2 className="heading-lg mt-4">Your Hotel Summary</h2>
-            <p className="mt-3 text-muted-foreground text-lg max-w-2xl">
-              Hotels would be similar; reserved rights for EasyTrip India under unfamiliar circumstances.
-            </p>
-            <div className="mt-12 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {trip.hotels.map((h, i) => (
-                <div key={i} className="card-elegant p-6 text-center">
-                  <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-dark text-warning flex items-center justify-center">
-                    <MapPin className="w-7 h-7" />
+            <h2 className="heading-lg mt-4">How You'll Travel</h2>
+            {trip.transport?.details && (
+              <p className="mt-3 text-muted-foreground text-lg max-w-2xl">{trip.transport.details}</p>
+            )}
+            {trip.transport_items?.length > 0 && (
+              <div className="mt-10 grid md:grid-cols-2 gap-5">
+                {(trip.transport_items as TransportItem[]).map((t, i) => (
+                  <div key={i} className="card-elegant p-6 border-l-4 border-l-secondary">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center shrink-0">
+                        {transportIcon(t.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-bold uppercase tracking-widest text-secondary">{t.type}</span>
+                          {t.timing && (
+                            <span className="text-xs text-muted-foreground">· {t.timing}</span>
+                          )}
+                        </div>
+                        {t.name && <div className="mt-1 text-lg font-bold text-primary">{t.name}</div>}
+                        {t.details && <div className="mt-2 text-sm text-muted-foreground">{t.details}</div>}
+                        {t.notes && (
+                          <div className="mt-3 text-xs text-muted-foreground bg-accent/40 rounded-lg p-3">
+                            {t.notes}
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-5 text-xs font-bold uppercase tracking-widest text-secondary">{h.city}</div>
-                  <div className="mt-2 text-lg font-bold text-primary">{h.name}</div>
-                  {h.note && (
-                    <div className="mt-3 text-sm text-muted-foreground">🍴 {h.note}</div>
-                  )}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </section>
       )}
 
-      {/* Activities */}
-      {trip.activities?.length > 0 && (
-        <section className="section-padding bg-gradient-soft">
+      {/* 6. Must-Carry Checklist */}
+      {hasChecklist && (
+        <section id="checklist" className="section-padding bg-gradient-soft">
           <div className="container-custom">
             <div className="section-label">
-              <Sparkles className="w-4 h-4" /> Experiences
+              <Backpack className="w-4 h-4" /> Trip Essentials
             </div>
-            <h2 className="heading-lg mt-4">Activities & Highlights</h2>
-            <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {trip.activities.map((a, i) => (
-                <div key={i} className="card-elegant p-5 flex items-start gap-3">
-                  <Sparkles className="w-5 h-5 text-secondary shrink-0 mt-0.5" />
-                  <span className="text-primary font-medium">{a}</span>
+            <h2 className="heading-lg mt-4">Must-Carry Checklist</h2>
+            <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {trip.checklist.map((g, i) => (
+                <div key={i} className="card-elegant p-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-primary text-secondary-foreground flex items-center justify-center">
+                      <ListChecks className="w-5 h-5" />
+                    </div>
+                    <h3 className="text-lg font-bold text-primary">{g.title}</h3>
+                  </div>
+                  <ul className="mt-5 space-y-2.5">
+                    {(g.items || []).filter(Boolean).map((it, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5 text-sm text-muted-foreground">
+                        <span className="mt-1 w-4 h-4 rounded border-2 border-secondary flex items-center justify-center shrink-0">
+                          <span className="block w-1.5 h-1.5 rounded-sm bg-secondary" />
+                        </span>
+                        {it}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ))}
             </div>
@@ -228,7 +347,114 @@ const TripPage = () => {
         </section>
       )}
 
-      {/* Cost */}
+      {/* 7. Important Guidelines */}
+      {hasGuidelines && (
+        <section id="guidelines" className="section-padding bg-background">
+          <div className="container-custom">
+            <div className="section-label">
+              <AlertTriangle className="w-4 h-4" /> Important Guidelines
+            </div>
+            <h2 className="heading-lg mt-4">Please Read Carefully</h2>
+            <div className="mt-10 grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {trip.guidelines.map((g, i) => (
+                <div key={i} className="card-elegant p-6 bg-gradient-to-br from-warning/5 to-transparent border-l-4 border-l-warning">
+                  <div className="flex gap-4">
+                    <div className="w-11 h-11 rounded-xl bg-warning/15 text-warning flex items-center justify-center shrink-0">
+                      <AlertTriangle className="w-5 h-5" />
+                    </div>
+                    <p className="text-primary font-medium leading-relaxed">{g.text}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 8. Climate Information */}
+      {hasClimate && (
+        <section id="climate" className="section-padding bg-gradient-soft">
+          <div className="container-custom">
+            <div className="section-label">
+              <Thermometer className="w-4 h-4" /> Climate
+            </div>
+            <h2 className="heading-lg mt-4">Climate Information</h2>
+
+            {(trip.climate?.day_temp || trip.climate?.night_temp) && (
+              <div className="mt-10 grid sm:grid-cols-2 gap-6 max-w-3xl">
+                {trip.climate?.day_temp && (
+                  <div className="rounded-3xl p-8 bg-gradient-to-br from-warning/30 via-warning/10 to-background shadow-card border border-warning/20 text-center">
+                    <Sun className="w-12 h-12 mx-auto text-warning" />
+                    <div className="mt-5 text-4xl md:text-5xl font-black text-warning">{trip.climate.day_temp}</div>
+                    <div className="mt-3 text-primary font-semibold">Daytime Temperature</div>
+                  </div>
+                )}
+                {trip.climate?.night_temp && (
+                  <div className="rounded-3xl p-8 bg-gradient-dark text-white shadow-elegant border border-white/10 text-center">
+                    <Moon className="w-12 h-12 mx-auto text-warning" />
+                    <div className="mt-5 text-4xl md:text-5xl font-black text-warning">{trip.climate.night_temp}</div>
+                    <div className="mt-3 font-semibold">Nighttime Temperature</div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="mt-8 grid md:grid-cols-3 gap-5">
+              {trip.climate?.weather && (
+                <div className="card-elegant p-6">
+                  <div className="text-xs font-bold uppercase tracking-widest text-secondary">Weather</div>
+                  <p className="mt-2 text-muted-foreground whitespace-pre-wrap">{trip.climate.weather}</p>
+                </div>
+              )}
+              {trip.climate?.clothing && (
+                <div className="card-elegant p-6">
+                  <div className="text-xs font-bold uppercase tracking-widest text-secondary">Clothing</div>
+                  <p className="mt-2 text-muted-foreground whitespace-pre-wrap">{trip.climate.clothing}</p>
+                </div>
+              )}
+              {trip.climate?.notes && (
+                <div className="card-elegant p-6">
+                  <div className="text-xs font-bold uppercase tracking-widest text-secondary">Seasonal Notes</div>
+                  <p className="mt-2 text-muted-foreground whitespace-pre-wrap">{trip.climate.notes}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 9. Tipping */}
+      {hasTipping && (
+        <section id="tipping" className="section-padding bg-background">
+          <div className="container-custom max-w-3xl">
+            <div className="section-label">
+              <HandCoins className="w-4 h-4" /> Tipping
+            </div>
+            <h2 className="heading-lg mt-4">Tipping Information</h2>
+            <div className="mt-8 card-elegant p-8 border-l-4 border-l-secondary">
+              <div className="grid sm:grid-cols-2 gap-6">
+                {trip.tipping?.currency && (
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-widest text-secondary">Currency</div>
+                    <div className="mt-1 text-xl font-bold text-primary">{trip.tipping.currency}</div>
+                  </div>
+                )}
+                {trip.tipping?.amount && (
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-widest text-secondary">Suggested Tip</div>
+                    <div className="mt-1 text-xl font-bold text-primary">{trip.tipping.amount}</div>
+                  </div>
+                )}
+              </div>
+              {trip.tipping?.notes && (
+                <p className="mt-6 text-muted-foreground leading-relaxed whitespace-pre-wrap">{trip.tipping.notes}</p>
+              )}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Cost banner */}
       {trip.total_cost && (
         <section className="relative section-padding bg-gradient-dark text-white overflow-hidden">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-secondary/20 blur-3xl" />
@@ -353,25 +579,37 @@ const TripPage = () => {
         </section>
       )}
 
-      {/* Notes */}
-      {trip.notes && (
-        <section className="section-padding bg-background">
+      {/* 10. Terms & Important Notes */}
+      {(hasTerms || trip.notes) && (
+        <section id="terms" className="section-padding bg-background">
           <div className="container-custom max-w-3xl">
             <div className="section-label">
-              <FileText className="w-4 h-4" /> Special Instructions
+              <FileText className="w-4 h-4" /> Terms & Important Notes
             </div>
-            <h2 className="heading-lg mt-4">Notes</h2>
-            <div className="card-elegant p-6 md:p-8 mt-8 whitespace-pre-wrap text-muted-foreground leading-relaxed">
-              {trip.notes}
-            </div>
+            <h2 className="heading-lg mt-4">Please Read Before You Travel</h2>
+            {hasTerms && (
+              <div className="card-elegant p-6 md:p-8 mt-8 whitespace-pre-wrap text-muted-foreground leading-relaxed">
+                {trip.terms}
+              </div>
+            )}
+            {trip.notes && (
+              <div className="card-elegant p-6 md:p-8 mt-6 whitespace-pre-wrap text-muted-foreground leading-relaxed">
+                <div className="text-xs font-bold uppercase tracking-widest text-secondary mb-3">Special Instructions</div>
+                {trip.notes}
+              </div>
+            )}
           </div>
         </section>
       )}
 
-      {/* Footer */}
+      {/* 11. Footer */}
       <footer className="bg-gradient-dark text-white py-10 text-center">
         <div className="container-custom">
-          <img src={logo} alt="EasyTrip India" className="h-12 mx-auto object-contain" />
+          <img
+            src={logo}
+            alt="EasyTrip India"
+            className="h-16 mx-auto object-contain bg-white rounded-2xl p-2 inline-block"
+          />
           <p className="mt-4 text-white/70 text-sm">
             EasyTrip India · Government of India Registered · Maharashtra Tourism Recognized
           </p>
@@ -384,24 +622,33 @@ const TripPage = () => {
         onOpenChange={setQrOpen}
         amount={totalAmt}
         title={`Pay ${trip.client_name}`}
+        qrUrl={trip.payment_qr_url}
       />
     </main>
   );
 };
 
 const Chip = ({ icon, text }: { icon: React.ReactNode; text: string }) => (
-  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur-md text-white text-sm font-medium">
-    <span className="text-warning">{icon}</span>
+  <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 text-white text-sm font-medium backdrop-blur-md">
+    {icon}
     {text}
   </span>
 );
 
-const DayTag = ({ icon, text, variant }: { icon: React.ReactNode; text: string; variant?: "green" }) => (
+const DayTag = ({
+  icon,
+  text,
+  variant = "default",
+}: {
+  icon: React.ReactNode;
+  text: string;
+  variant?: "default" | "green";
+}) => (
   <span
-    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs md:text-sm font-semibold border ${
+    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${
       variant === "green"
-        ? "bg-secondary/10 text-secondary border-secondary/30"
-        : "bg-muted text-primary border-border"
+        ? "bg-success/15 text-success"
+        : "bg-accent text-accent-foreground"
     }`}
   >
     {icon}
