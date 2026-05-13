@@ -13,7 +13,7 @@ type Inst = {
 const installments: Inst[] = [
   { no: "1st", amount: "₹90,000", meta: "12 February 2026 · 1:14 PM", via: "UPI to Megha Bagore" },
   { no: "2nd", amount: "₹58,000", meta: "16 April 2026 · 3:11 PM", via: "UPI to Megha Bagore" },
-  { no: "3rd", amount: "₹70,000", meta: "Due 10 May 2026" },
+  { no: "3rd", amount: "₹70,000", meta: "10 May 2026", via: "UPI to Shlok Pravin Bagore" },
   { no: "4th", amount: "₹1,50,000", meta: "On Arrival", via: "Vehicle, tolls & hotel expenses" },
   { no: "5th", amount: "₹42,000", meta: "During the Tour", via: "Balance payment" },
 ];
